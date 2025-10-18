@@ -1,6 +1,4 @@
-# =========================================================
-# 📦 Node.js + React Full Stack Project (Online Grocery)
-# =========================================================
+
 
 # --- Node Dependencies ---
 node_modules/
@@ -50,3 +48,6 @@ Thumbs.db
 
 # --- Reports ---
 *.md.html
+
+# MacOS system files
+.DS_Store
