@@ -1,0 +1,36 @@
+.order-confirmation .card {
+  color: #222 !important; /* stronger text color for readability */
+}
+
+.oc-row {
+  color: #222;
+  margin: 6px 0;
+  font-size: 15px;
+}
+
+.oc-items-title {
+  margin-top: 12px;
+  color: #222;
+}
+
+.oc-items {
+  margin-top: 8px;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f7f9fc;
+}
+
+.oc-item-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e9eef6;
+  color: #222;
+}
+
+.oc-item-row:last-child { border-bottom: none; }
+
+.oc-item-name { font-weight: 600; }
+.oc-item-price { font-weight: 700; }
+
+.oc-total { text-align: right; color: #222; }
