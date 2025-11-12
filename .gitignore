@@ -1,33 +1,37 @@
-# Node Modules
+# Node modules
 node_modules/
-frontend/node_modules/
-backend/node_modules/
+**/node_modules/
 
-# Environment Files
+# Environment files
 .env
 backend/.env
+frontend/.env
 
 # Logs
 *.log
 
-# macOS System Files
+# MacOS system files
 .DS_Store
 
-# Editor / IDE Configs
+# Editor / IDE configs
 .vscode/
 .idea/
 
-# Cache Folders
+# Cache folders
 .cache/
-frontend/.cache/
 backend/.cache/
+frontend/.cache/
 
-# Temporary Files
+# Temporary files
 *.swp
 *.tmp
 *.bak
 
-# Coverage Reports
+# coverage reports
 coverage/
 frontend/coverage/
 backend/coverage/
+
+# build / dist / prod artifacts
+dist/
+build/
