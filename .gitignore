@@ -1,11 +1,13 @@
+# from repo root
+cat > .gitignore <<'EOF'
 # Node modules
 node_modules/
-**/node_modules/
+frontend/node_modules/
+backend/node_modules/
 
 # Environment files
 .env
 backend/.env
-frontend/.env
 
 # Logs
 *.log
@@ -31,7 +33,4 @@ frontend/.cache/
 coverage/
 frontend/coverage/
 backend/coverage/
-
-# build / dist / prod artifacts
-dist/
-build/
+EOF
