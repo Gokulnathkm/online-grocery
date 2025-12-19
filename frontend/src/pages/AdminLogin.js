@@ -1,65 +1,88 @@
-import React, { useState } from "react";
-import { useHistory, Link } from "react-router-dom";
-import { loginUser } from "../mockApi";
-import "../App.css";
+import { useState } from "react";
+import { useHistory } from "react-router-dom";
+import "../styles.css";
 
-function AdminLogin() {
-  const history = useHistory();
+export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const history = useHistory();
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      alert("Please enter email and password");
-      return;
-    }
+    setError("");
     setLoading(true);
+
     try {
-      const res = await loginUser({ email, password });
-      if (!res.success) {
-        alert(res.msg || 'Login failed');
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Invalid credentials");
         return;
       }
-      if (res.user.role !== 'admin') {
-        alert('Not an admin account');
-        return;
-      }
-  localStorage.setItem('currentUser', JSON.stringify({ name: res.user.name, email: res.user.email, role: res.user.role }));
-      history.push('/admin');
+
+      // ✅ SUCCESS HANDLING (MATCHES App.js)
+      localStorage.setItem("token", data.token);
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify({ role: "admin" })
+      );
+
+      // ✅ SINGLE redirect (correct)
+      history.push("/admin");
+
+    } catch (err) {
+      setError("Server unavailable. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="page-container">
-      <div className="card">
-        <h2>Admin Login</h2>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Enter Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Enter Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit" disabled={loading}>{loading ? "Logging in..." : "Login as Admin"}</button>
-        </form>
-        <p>
-          New admin? <Link to="/admin/register">Register</Link>
-        </p>
-      </div>
+    <div className="admin-container">
+      <form className="admin-card" onSubmit={handleLogin}>
+        <h2>Admin Portal</h2>
+        <p className="subtitle">Sign in to manage the platform</p>
+
+        {error && <div className="error-msg">{error}</div>}
+
+        <input
+          type="email"
+          placeholder="Admin Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
+
+        <div className="footer-text">
+          New admin?{" "}
+          <span onClick={() => history.push("/admin/register")}>
+            Register
+          </span>
+        </div>
+      </form>
     </div>
   );
 }
-
-export default AdminLogin;
-
-
