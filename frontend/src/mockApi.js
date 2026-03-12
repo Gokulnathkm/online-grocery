@@ -2,7 +2,7 @@
 
 const API =
   process.env.REACT_APP_API_URL ||
-  "https://online-grocery-gc6r.onrender.com";
+  "http://localhost:5050";
 
 // ================= HELPERS =================
 const getToken = () => localStorage.getItem("token");
@@ -55,6 +55,19 @@ export const loginUser = async ({ email, password }) => {
 // ================= PRODUCTS =================
 export const fetchProducts = async () => {
   const res = await fetch(`${API}/api/products`);
+  return handleJson(res);
+};
+
+export const uploadProductImage = async (file) => {
+  const formData = new FormData();
+  formData.append("image", file);
+  const res = await fetch(`${API}/api/products/upload`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(),
+    },
+    body: formData,
+  });
   return handleJson(res);
 };
 

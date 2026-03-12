@@ -124,7 +124,22 @@ const CustomerDashboard = () => {
         {visibleProducts.map((product) => (
           <div className="product-card" key={product.id}>
             <div className="image-container">
-              <img src={product.image} alt={product.name} />
+              {product.image ? (
+                <img src={product.image} alt={product.name} />
+              ) : (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: '#f7fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#a0aec0',
+                  fontSize: '14px'
+                }}>
+                  No Image
+                </div>
+              )}
             </div>
             <h3>{product.name}</h3>
             <p>₹{product.price.toFixed(2)}</p>

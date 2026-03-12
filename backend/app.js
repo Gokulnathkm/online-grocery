@@ -24,6 +24,8 @@ app.use(cors({
   preflightContinue: false
 }));
 app.use(express.json()); // Parse JSON bodies
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve static files for image uploads
 
 // Simple request logger
 app.use((req, res, next) => {

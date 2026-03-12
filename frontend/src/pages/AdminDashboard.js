@@ -12,7 +12,8 @@ import {
   fetchAgents,
   assignOrderApi,
   fetchUsers,
-  adjustProductStock
+  adjustProductStock,
+  uploadProductImage
 } from '../mockApi';
 
 
@@ -22,6 +23,7 @@ const AdminDashboard = () => {
   const [orderSearch, setOrderSearch] = useState('');
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -160,6 +162,7 @@ const AdminDashboard = () => {
   function closeProductModal() {
     setShowProductModal(false);
     setEditingProduct(null);
+    setSelectedImageFile(null);
   }
   async function saveProduct(e) {
     e.preventDefault();
@@ -169,20 +172,37 @@ const AdminDashboard = () => {
     if (Number.isNaN(stock) || Number.isNaN(price)) return;
     
     try {
+      let finalImageUrl = editingProduct.image || '';
+
+      if (selectedImageFile) {
+        console.log('Uploading selected image file...');
+        const uploadRes = await uploadProductImage(selectedImageFile);
+        if (uploadRes && uploadRes.imageUrl) {
+          const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5050";
+          if (uploadRes.imageUrl.startsWith('/')) {
+            finalImageUrl = `${API_BASE}${uploadRes.imageUrl}`;
+          } else {
+            finalImageUrl = uploadRes.imageUrl;
+          }
+        }
+      }
+
+      const productPayload = { name: editingProduct.name, stock, price, image: finalImageUrl };
+
       if (editingProduct._id || (typeof editingProduct.id === 'string' && editingProduct.id.length > 16)) {
         console.log('Updating existing product in database:', editingProduct._id || editingProduct.id);
-        const updated = await apiUpdateProduct(editingProduct._id || editingProduct.id, { name: editingProduct.name, stock, price, image: editingProduct.image || '' });
+        const updated = await apiUpdateProduct(editingProduct._id || editingProduct.id, productPayload);
         console.log('Product updated successfully:', updated);
         setProducts(products.map(p => (p._id === updated._id || p.id === updated._id) ? { ...updated, id: updated._id } : p));
       } else if (editingProduct.id == null) {
-        console.log('Creating new product in database:', { name: editingProduct.name, stock, price, image: editingProduct.image || '' });
-        const created = await apiCreateProduct({ name: editingProduct.name, stock, price, image: editingProduct.image || '' });
+        console.log('Creating new product in database:', productPayload);
+        const created = await apiCreateProduct(productPayload);
         console.log('Product created successfully:', created);
         setProducts([{ ...created, id: created._id }, ...products]);
       } else {
         console.log('Legacy local update for product:', editingProduct.id);
         // Legacy local update
-        setProducts(products.map(p => p.id === editingProduct.id ? { ...p, name: editingProduct.name, stock, price, image: editingProduct.image || p.image } : p));
+        setProducts(products.map(p => p.id === editingProduct.id ? { ...p, ...productPayload } : p));
       }
       closeProductModal();
     } catch (error) {
@@ -929,8 +949,27 @@ const AdminDashboard = () => {
             <form onSubmit={saveProduct} className="modal-body">
               <label className="label">Name</label>
               <input className="input" value={editingProduct?.name || ''} onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })} />
-              <label className="label">Image URL</label>
-              <input className="input" value={editingProduct?.image || ''} onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })} />
+              
+              <label className="label">Product Image</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      setSelectedImageFile(e.target.files[0]);
+                    }
+                  }} 
+                />
+                <div style={{ fontSize: '12px', color: '#718096', textAlign: 'center' }}>OR</div>
+                <input 
+                  className="input" 
+                  placeholder="Image URL"
+                  value={editingProduct?.image || ''} 
+                  onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })} 
+                />
+              </div>
+
               <label className="label">Stock</label>
               <input className="input" type="number" value={editingProduct?.stock ?? 0} onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })} />
               <label className="label">Price (₹)</label>
