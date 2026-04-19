@@ -2,7 +2,7 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
 import { useHistory } from 'react-router-dom';
-import './ProductCard.css';
+
 
 const ProductCard = ({ product }) => {
   const { addToCart, clearCart } = useCart();

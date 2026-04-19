@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/Navbar';
-import './AdminDashboard.css';
-import './DeliveryDashboard.css';
 import { fetchOrders, updateOrderStatusApi } from '../mockApi';
 
 const DeliveryDashboard = () => {
@@ -58,14 +56,21 @@ const DeliveryDashboard = () => {
     }
   }
 
+  const getStatusBadge = (status) => {
+    if (status === 'delivered') return 'success';
+    if (status === 'out_for_delivery') return 'info';
+    if (status === 'picked_up') return 'warning';
+    return '';
+  };
+
   return (
     <div>
       <Navbar role={agent?.role || "delivery"} />
       <div className="admin-page">
-        <div className="admin-header delivery-header">
+        <div className="page-header">
           <div>
-            <h2>Delivery Dashboard</h2>
-            <p className="subtitle">Welcome{agent?.name ? `, ${agent.name}` : ''}. Track and update your deliveries.</p>
+            <h1>🚚 Delivery Dashboard</h1>
+            <p className="page-header-subtitle">Welcome{agent?.name ? `, ${agent.name}` : ''}. Track and update your deliveries.</p>
           </div>
         </div>
 
@@ -84,9 +89,9 @@ const DeliveryDashboard = () => {
           </div>
         </div>
 
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-header">
-            <h3>Unassigned Shipments</h3>
+            <h3>📬 Unassigned Shipments</h3>
           </div>
           <div className="table-wrapper">
             <table className="table">
@@ -101,15 +106,15 @@ const DeliveryDashboard = () => {
               </thead>
               <tbody>
                 {unassigned.length === 0 ? (
-                  <tr><td colSpan="5" style={{ textAlign: 'center', color: '#777' }}>No unassigned shipments</td></tr>
+                  <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 30 }}>No unassigned shipments</td></tr>
                 ) : (
                   unassigned.map(o => (
                     <tr key={o.id}>
-                      <td>{o.orderId || o.id}</td>
-                      <td>{o.customer}</td>
-                      <td>{Number(o.total).toFixed(2)}</td>
-                      <td>{o.status}</td>
-                      <td><button className="btn primary" onClick={() => claim(o.id)}>Claim</button></td>
+                      <td className="cell-id">{o.orderId || o.id}</td>
+                      <td style={{ fontWeight: 500 }}>{o.customer}</td>
+                      <td style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>₹{Number(o.total).toFixed(2)}</td>
+                      <td><span className="badge">{o.status}</span></td>
+                      <td><button className="btn small primary" onClick={() => claim(o.id)}>Claim</button></td>
                     </tr>
                   ))
                 )}
@@ -118,9 +123,9 @@ const DeliveryDashboard = () => {
           </div>
         </div>
 
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card">
           <div className="card-header">
-            <h3>My Deliveries</h3>
+            <h3>📦 My Deliveries</h3>
           </div>
           <div className="table-wrapper">
             <table className="table">
@@ -135,24 +140,18 @@ const DeliveryDashboard = () => {
               </thead>
               <tbody>
                 {myOrders.length === 0 ? (
-                  <tr><td colSpan="5" style={{ textAlign: 'center', color: '#777' }}>No deliveries yet</td></tr>
+                  <tr><td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 30 }}>No deliveries yet</td></tr>
                 ) : (
                   myOrders.map(o => (
                     <tr key={o.id}>
-                      <td>{o.orderId || o.id}</td>
-                      <td>{o.customer}</td>
-                      <td>{Number(o.total).toFixed(2)}</td>
+                      <td className="cell-id">{o.orderId || o.id}</td>
+                      <td style={{ fontWeight: 500 }}>{o.customer}</td>
+                      <td style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>₹{Number(o.total).toFixed(2)}</td>
                       <td>
-                        <span className={
-                          o.status === 'delivered' ? 'badge success' :
-                          o.status === 'out_for_delivery' ? 'badge info' :
-                          o.status === 'picked_up' ? 'badge warning' : 'badge'
-                        }>
-                          {o.status}
-                        </span>
+                        <span className={`badge ${getStatusBadge(o.status)}`}>{o.status}</span>
                       </td>
                       <td>
-                        <select className="select" value={o.status} onChange={(e) => updateStatus(o.id, e.target.value)}>
+                        <select value={o.status} onChange={(e) => updateStatus(o.id, e.target.value)} style={{ maxWidth: 180 }}>
                           <option value="shipped">shipped</option>
                           <option value="picked_up">picked_up</option>
                           <option value="out_for_delivery">out_for_delivery</option>

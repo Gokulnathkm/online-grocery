@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/Navbar';
-import './AdminDashboard.css';
 import sharedProducts from '../data/products';
 
 import {
@@ -30,7 +29,7 @@ const AdminDashboard = () => {
   const [assignments, setAssignments] = useState({});
 
   const [users, setUsers] = useState([]);
-  const [expandedOrders, setExpandedOrders] = useState([]); // list of order ids that are expanded to show items
+  const [expandedOrders, setExpandedOrders] = useState([]);
 
   // Load data from API; fallback to seed/localStorage on failure
   useEffect(() => {
@@ -47,33 +46,20 @@ const AdminDashboard = () => {
     ];
     async function load() {
       try {
-        console.log('Loading data from API...');
-        console.log('Current token:', localStorage.getItem('token'));
-        console.log('Current user:', localStorage.getItem('currentUser'));
-        
         const [pRes, oRes, aRes, uRes] = await Promise.all([
           fetchProducts(),
           fetchOrders(),
           fetchAgents(),
           fetchUsers()
         ]);
-        
-        console.log('API responses received:');
-        console.log('- Products:', pRes.length, 'items');
-        console.log('- Orders:', oRes.length, 'items');
-        console.log('- Agents:', aRes.length, 'items');
-        console.log('- Users:', uRes.length, 'items');
-        
-        // Products from API
+
         if (Array.isArray(pRes)) setProducts(pRes.map(p => ({ ...p, id: p._id })));
-        // Orders from API: normalize customer field and capture created date (some APIs use customerName or customerEmail)
         if (Array.isArray(oRes)) setOrders(oRes.map(o => ({
           ...o,
           id: o.orderId || o.id,
           customer: o.customerName || o.customer || o.customerEmail || 'Unknown',
           orderDate: o.createdAt || o.created_at || o.orderDate || o.date || null
         })));
-        // Agents from API (delivery users)
         if (Array.isArray(aRes) && aRes.length) setAgents(aRes);
         else setAgents(seedAgents);
         if (Array.isArray(uRes)) setUsers(uRes.map(u => ({ ...u, id: u._id })));
@@ -101,18 +87,17 @@ const AdminDashboard = () => {
           localStorage.setItem('delivery_agents', JSON.stringify(seedAgents));
         }
         setAssignments(storedAssignments && typeof storedAssignments === 'object' ? storedAssignments : {});
-        // users fallback stays empty
       }
     }
     load();
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('admin_products', JSON.stringify(products)); } catch {}
+    try { localStorage.setItem('admin_products', JSON.stringify(products)); } catch { }
   }, [products]);
 
   useEffect(() => {
-    try { localStorage.setItem('admin_orders', JSON.stringify(orders)); } catch {}
+    try { localStorage.setItem('admin_orders', JSON.stringify(orders)); } catch { }
   }, [orders]);
 
   const totalRevenue = useMemo(() => orders.reduce((sum, o) => sum + Number(o.total || 0), 0), [orders]);
@@ -130,11 +115,8 @@ const AdminDashboard = () => {
     return orders.filter(o => `${o.id} ${o.customer} ${o.status}`.toLowerCase().includes(q));
   }, [orders, orderSearch]);
 
-  // Helper: format a date for a record (order/user). Prefer explicit createdAt/orderDate fields,
-  // otherwise attempt to derive from a Mongo ObjectId (_id) timestamp. Return 'Unknown' if not possible.
   function formatDateFrom(rec) {
     if (!rec) return 'Unknown';
-    // If a raw date/string/number was passed
     if (typeof rec === 'string' || typeof rec === 'number') {
       try { return new Date(rec).toLocaleDateString(); } catch (e) { return 'Unknown'; }
     }
@@ -143,10 +125,10 @@ const AdminDashboard = () => {
       try { return new Date(possible).toLocaleDateString(); } catch (e) { /* fallthrough */ }
     }
     if (rec._id && typeof rec._id === 'string' && rec._id.length >= 8) {
-      try { return new Date(parseInt(rec._id.substring(0,8), 16) * 1000).toLocaleDateString(); } catch (e) { /* fallthrough */ }
+      try { return new Date(parseInt(rec._id.substring(0, 8), 16) * 1000).toLocaleDateString(); } catch (e) { /* fallthrough */ }
     }
     if (rec.id && typeof rec.id === 'string' && rec.id.length >= 8) {
-      try { return new Date(parseInt(rec.id.substring(0,8), 16) * 1000).toLocaleDateString(); } catch (e) { /* fallthrough */ }
+      try { return new Date(parseInt(rec.id.substring(0, 8), 16) * 1000).toLocaleDateString(); } catch (e) { /* fallthrough */ }
     }
     return 'Unknown';
   }
@@ -170,12 +152,11 @@ const AdminDashboard = () => {
     const stock = Number(editingProduct.stock);
     const price = Number(editingProduct.price);
     if (Number.isNaN(stock) || Number.isNaN(price)) return;
-    
+
     try {
       let finalImageUrl = editingProduct.image || '';
 
       if (selectedImageFile) {
-        console.log('Uploading selected image file...');
         const uploadRes = await uploadProductImage(selectedImageFile);
         if (uploadRes && uploadRes.imageUrl) {
           const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5050";
@@ -190,18 +171,12 @@ const AdminDashboard = () => {
       const productPayload = { name: editingProduct.name, stock, price, image: finalImageUrl };
 
       if (editingProduct._id || (typeof editingProduct.id === 'string' && editingProduct.id.length > 16)) {
-        console.log('Updating existing product in database:', editingProduct._id || editingProduct.id);
         const updated = await apiUpdateProduct(editingProduct._id || editingProduct.id, productPayload);
-        console.log('Product updated successfully:', updated);
         setProducts(products.map(p => (p._id === updated._id || p.id === updated._id) ? { ...updated, id: updated._id } : p));
       } else if (editingProduct.id == null) {
-        console.log('Creating new product in database:', productPayload);
         const created = await apiCreateProduct(productPayload);
-        console.log('Product created successfully:', created);
         setProducts([{ ...created, id: created._id }, ...products]);
       } else {
-        console.log('Legacy local update for product:', editingProduct.id);
-        // Legacy local update
         setProducts(products.map(p => p.id === editingProduct.id ? { ...p, ...productPayload } : p));
       }
       closeProductModal();
@@ -220,18 +195,16 @@ const AdminDashboard = () => {
       setProducts(products.filter(p => p.id !== id));
     }
   }
-  
-  
 
   async function assignAgentToOrder(orderId, agentEmail) {
     const candidate = orders.find(o => (o.orderId === orderId) || (o.id === orderId) || (o._id === orderId));
     if (candidate && candidate._id) {
       const updated = await assignOrderApi(candidate._id, agentEmail || null);
-      setOrders(orders.map(o => (o._id === updated._id) ? { ...updated, id: updated.orderId || updated.id } : o));
+      setOrders(orders.map(o => (o._id === updated._id) ? { ...o, ...updated, id: updated.orderId || updated.id, customer: o.customer || updated.customerName || updated.customer || 'Unknown' } : o));
     }
     const nextAssignments = { ...assignments, [orderId]: agentEmail };
     setAssignments(nextAssignments);
-    try { localStorage.setItem('delivery_assignments', JSON.stringify(nextAssignments)); } catch {}
+    try { localStorage.setItem('delivery_assignments', JSON.stringify(nextAssignments)); } catch { }
   }
 
   function exportCsv(rows, filename) {
@@ -248,22 +221,29 @@ const AdminDashboard = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+
   const reports = useMemo(() => [
     { id: 'RPT-SEP-SALES', name: 'September Sales', generatedAt: '2025-09-25' },
     { id: 'RPT-INV-STOCK', name: 'Inventory Snapshot', generatedAt: '2025-09-24' }
   ], []);
 
+  const getRoleBadge = (role) => {
+    if (role === 'admin') return 'role-admin';
+    if (role === 'delivery') return 'role-delivery';
+    return 'role-customer';
+  };
+
   return (
     <div>
       <Navbar role="admin" />
       <div className="admin-page">
-        <div className="admin-header">
+        <div className="page-header">
           <div>
-            <h2>Admin Dashboard</h2>
-            <p>Manage users, products, orders and reports.</p>
+            <h1>📊 Admin Dashboard</h1>
+            <p className="page-header-subtitle">Manage users, products, orders and reports.</p>
           </div>
-          <div className="admin-actions">
-            <button className="btn primary" onClick={openNewProductModal}>Add Product</button>
+          <div className="card-actions">
+            <button className="btn primary" onClick={openNewProductModal}>+ Add Product</button>
           </div>
         </div>
 
@@ -286,126 +266,45 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="admin-tabs">
+        <div className="tabs">
           <button className={activeTab === 'users' ? 'tab active' : 'tab'} onClick={() => setActiveTab('users')}>Users</button>
           <button className={activeTab === 'products' ? 'tab active' : 'tab'} onClick={() => setActiveTab('products')}>Products</button>
           <button className={activeTab === 'orders' ? 'tab active' : 'tab'} onClick={() => setActiveTab('orders')}>Orders</button>
           <button className={activeTab === 'reports' ? 'tab active' : 'tab'} onClick={() => setActiveTab('reports')}>Reports</button>
         </div>
 
+        {/* ─── Users Tab ─── */}
         {activeTab === 'users' && (
-          <div className="card" style={{ 
-            minHeight: '600px',
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            maxWidth: 'none'
-          }}>
+          <div className="card">
             <div className="card-header">
-              <h3>Users</h3>
-              <div className="card-actions">
-              </div>
+              <h3>👥 Users</h3>
             </div>
-            <div className="table-wrapper" style={{ 
-              borderRadius: '12px', 
-              overflow: 'visible',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0',
-              flex: 1,
-              minHeight: '500px',
-              width: '100%'
-            }}>
-              <table className="table" style={{ 
-                margin: 0,
-                backgroundColor: 'white',
-                minHeight: '500px',
-                width: '100%',
-                tableLayout: 'fixed'
-              }}>
-                <thead style={{ backgroundColor: '#f8fafc' }}>
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>ID</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '20%' }}>Name</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '30%' }}>Email</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>Role</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '20%' }}>Actions</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.filter(u => u.role !== 'admin').map((u) => (
-                    <tr key={u.id || u._id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ 
-                        color: '#4a5568', 
-                        fontSize: '14px', 
-                        fontFamily: 'monospace',
-                        padding: '16px 20px',
-                        wordBreak: 'break-all'
-                      }}>
-                        {u.id || u._id}
-                      </td>
-                      <td style={{ 
-                        color: '#2d3748', 
-                        fontSize: '15px', 
-                        fontWeight: '500',
-                        padding: '16px 20px'
-                      }}>
-                        {u.name}
-                      </td>
-                      <td style={{ 
-                        color: '#4a5568', 
-                        fontSize: '15px',
-                        padding: '16px 20px',
-                        wordBreak: 'break-all'
-                      }}>
-                        {u.email}
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
-                        <span style={{
-                          background: u.role === 'admin' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 
-                                     u.role === 'delivery' ? 'linear-gradient(135deg, #f093fb, #f5576c)' : 
-                                     'linear-gradient(135deg, #4facfe, #00f2fe)',
-                          color: 'white',
-                          padding: '6px 16px',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
-                        }}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
-                        <button 
-                          onClick={() => {
-                            // Show registration date (createdAt) only — last-login info removed
-                            const regDate = formatDateFrom(u);
-                            alert(`User Details:\n\nID: ${u.id || u._id}\nName: ${u.name}\nEmail: ${u.email}\nRole: ${u.role}\n\nAdditional Info:\n- Account Status: Active\n- Registration Date: ${regDate}`);
-                          }}
-                          style={{
-                            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                            color: 'white',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onMouseOver={(e) => {
-                            e.target.style.transform = 'translateY(-1px)';
-                            e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.target.style.transform = 'translateY(0)';
-                            e.target.style.boxShadow = 'none';
-                          }}
-                        >
-                          View
-                        </button>
+                    <tr key={u.id || u._id}>
+                      <td className="cell-id">{u.id || u._id}</td>
+                      <td style={{ fontWeight: 500 }}>{u.name}</td>
+                      <td>{u.email}</td>
+                      <td><span className={`badge ${getRoleBadge(u.role)}`}>{u.role}</span></td>
+                      <td>
+                        <button className="btn small primary" onClick={(e) => {
+                          e.stopPropagation();
+                          const regDate = formatDateFrom(u);
+                          setTimeout(() => {
+                            alert(`User Details:\n\nID: ${u.id || u._id}\nName: ${u.name}\nEmail: ${u.email}\nRole: ${u.role}\n\nRegistration Date: ${regDate}`);
+                          }, 50);
+                        }}>View</button>
                       </td>
                     </tr>
                   ))}
@@ -415,215 +314,63 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* ─── Products Tab ─── */}
         {activeTab === 'products' && (
-          <div className="card" style={{ 
-            minHeight: '600px',
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            maxWidth: 'none'
-          }}>
+          <div className="card">
             <div className="card-header">
-              <h3>Products</h3>
-              <div className="card-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <input 
-                  className="input" 
-                  placeholder="Search products..." 
-                  value={productSearch} 
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  style={{ 
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    minWidth: '200px'
-                  }}
-                />
-                <button 
-                  className="btn" 
-                  onClick={() => exportCsv(filteredProducts, 'products.csv')}
-                  style={{
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
-                  Export CSV
-                </button>
-                <button 
-                  className="btn primary" 
-                  onClick={openNewProductModal}
-                  style={{
-                    padding: '10px 20px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
-                  + New Product
-                </button>
+              <h3>📦 Products</h3>
+              <div className="card-actions">
+                <input className="input" placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} style={{ minWidth: 200 }} />
+                <button className="btn" onClick={() => exportCsv(filteredProducts, 'products.csv')}>Export CSV</button>
+                <button className="btn primary" onClick={openNewProductModal}>+ New Product</button>
               </div>
             </div>
-            <div className="table-wrapper" style={{ 
-              flex: 1,
-              minHeight: '500px',
-              borderRadius: '12px', 
-              overflow: 'visible',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0',
-              width: '100%'
-            }}>
-              <table className="table" style={{ 
-                margin: 0,
-                backgroundColor: 'white',
-                minHeight: '500px',
-                width: '100%',
-                tableLayout: 'fixed'
-              }}>
-                <thead style={{ backgroundColor: '#f8fafc' }}>
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '10%' }}>ID</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '25%' }}>Name</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>Image</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '10%' }}>Stock</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>Price (₹)</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '25%' }}>Actions</th>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Image</th>
+                    <th>Stock</th>
+                    <th>Price (₹)</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredProducts.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ 
-                        color: '#4a5568', 
-                        fontSize: '14px', 
-                        fontFamily: 'monospace',
-                        padding: '16px 20px',
-                        wordBreak: 'break-all'
-                      }}>
-                        {p.id}
-                      </td>
-                      <td style={{ 
-                        color: '#2d3748', 
-                        fontSize: '15px', 
-                        fontWeight: '500',
-                        padding: '16px 20px'
-                      }}>
-                        {p.name}
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
+                    <tr key={p.id}>
+                      <td className="cell-id">{p.id}</td>
+                      <td style={{ fontWeight: 500 }}>{p.name}</td>
+                      <td>
                         {p.image ? (
-                          <img 
-                            src={p.image} 
-                            alt={p.name} 
-                            style={{ 
-                              width: 50, 
-                              height: 50, 
-                              objectFit: 'cover', 
-                              borderRadius: 8,
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                            }} 
-                          />
+                          <img src={p.image} alt={p.name} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8 }} />
                         ) : (
-                          <div style={{
-                            width: 50,
-                            height: 50,
-                            backgroundColor: '#f7fafc',
-                            borderRadius: 8,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#a0aec0',
-                            fontSize: '12px'
-                          }}>
-                            No Image
-                          </div>
+                          <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--text-muted)' }}>N/A</div>
                         )}
                       </td>
-                      <td style={{ 
-                        color: '#4a5568', 
-                        fontSize: '15px',
-                        padding: '16px 20px',
-                        fontWeight: '500',
-                        textAlign: 'center'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                          <button
-                            className="btn small"
-                            onClick={async () => {
-                              try {
-                                const updated = await adjustProductStock(p._id || p.id, -1);
-                                setProducts(products.map(x => (x._id === updated._id || x.id === updated._id) ? { ...updated, id: updated._id } : x));
-                              } catch (err) {
-                                console.error('Error decrementing stock', err);
-                                alert(err.message || 'Could not decrement stock');
-                              }
-                            }}
-                            style={{ padding: '6px 8px' }}
-                          >
-                            -
-                          </button>
-                          <div style={{ minWidth: 40, textAlign: 'center', fontWeight: 600 }}>{p.stock}</div>
-                          <button
-                            className="btn small"
-                            onClick={async () => {
-                              try {
-                                const updated = await adjustProductStock(p._id || p.id, 1);
-                                setProducts(products.map(x => (x._id === updated._id || x.id === updated._id) ? { ...updated, id: updated._id } : x));
-                              } catch (err) {
-                                console.error('Error incrementing stock', err);
-                                alert(err.message || 'Could not increment stock');
-                              }
-                            }}
-                            style={{ padding: '6px 8px' }}
-                          >
-                            +
-                          </button>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <button className="btn small" onClick={async () => {
+                            try {
+                              const updated = await adjustProductStock(p._id || p.id, -1);
+                              setProducts(products.map(x => (x._id === updated._id || x.id === updated._id) ? { ...updated, id: updated._id } : x));
+                            } catch (err) { alert(err.message || 'Could not decrement stock'); }
+                          }}>−</button>
+                          <span style={{ minWidth: 32, textAlign: 'center', fontWeight: 700 }}>{p.stock}</span>
+                          <button className="btn small" onClick={async () => {
+                            try {
+                              const updated = await adjustProductStock(p._id || p.id, 1);
+                              setProducts(products.map(x => (x._id === updated._id || x.id === updated._id) ? { ...updated, id: updated._id } : x));
+                            } catch (err) { alert(err.message || 'Could not increment stock'); }
+                          }}>+</button>
                         </div>
                       </td>
-                      <td style={{ 
-                        color: '#2d3748', 
-                        fontSize: '15px',
-                        padding: '16px 20px',
-                        fontWeight: '600',
-                        textAlign: 'center'
-                      }}>
-                        ₹{p.price.toFixed(2)}
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button 
-                            className="btn small" 
-                            onClick={() => openEditProductModal(p)}
-                            style={{
-                              background: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            className="btn small danger" 
-                            onClick={() => deleteProduct(p.id)}
-                            style={{
-                              background: 'linear-gradient(135deg, #ff6b6b, #ee5a52)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            Delete
-                          </button>
+                      <td style={{ fontWeight: 600, color: 'var(--accent-emerald)' }}>₹{p.price.toFixed(2)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn small primary" onClick={() => openEditProductModal(p)}>Edit</button>
+                          <button className="btn small danger" onClick={() => deleteProduct(p.id)}>Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -634,172 +381,87 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* ─── Orders Tab ─── */}
         {activeTab === 'orders' && (
-          <div className="card" style={{ 
-            minHeight: '600px',
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            maxWidth: 'none'
-          }}>
+          <div className="card">
             <div className="card-header">
-              <h3>Orders</h3>
-              <div className="card-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <input 
-                  className="input" 
-                  placeholder="Search orders..." 
-                  value={orderSearch} 
-                  onChange={(e) => setOrderSearch(e.target.value)}
-                  style={{ 
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    minWidth: '200px'
-                  }}
-                />
-                <button 
-                  className="btn" 
-                  onClick={() => exportCsv(filteredOrders, 'orders.csv')}
-                  style={{
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
-                  Export CSV
-                </button>
+              <h3>📋 Orders</h3>
+              <div className="card-actions">
+                <input className="input" placeholder="Search orders..." value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} style={{ minWidth: 200 }} />
+                <button className="btn" onClick={() => exportCsv(filteredOrders, 'orders.csv')}>Export CSV</button>
               </div>
             </div>
-            <div className="table-wrapper" style={{ 
-              flex: 1,
-              minHeight: '500px',
-              borderRadius: '12px', 
-              overflow: 'visible',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0',
-              width: '100%'
-            }}>
-              <table className="table" style={{ 
-                margin: 0,
-                backgroundColor: 'white',
-                minHeight: '500px',
-                width: '100%',
-                tableLayout: 'fixed'
-              }}>
-                <thead style={{ backgroundColor: '#f8fafc' }}>
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>Order ID</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '20%' }}>Customer</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>Total (₹)</th>
-                    {/* Status column removed per request */}
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '20%' }}>Assigned To</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>Actions</th>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Total (₹)</th>
+                    <th>Assigned To</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredOrders.map((o) => (
                     <React.Fragment key={o.id}>
-                      <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ 
-                        color: '#4a5568', 
-                        fontSize: '14px', 
-                        fontFamily: 'monospace',
-                        padding: '16px 20px',
-                        wordBreak: 'break-all'
-                      }}>
-                        {o.orderId || o.id}
-                      </td>
-                      <td style={{ 
-                        color: '#2d3748', 
-                        fontSize: '15px', 
-                        fontWeight: '500',
-                        padding: '16px 20px'
-                      }}>
-                        {o.customer}
-                      </td>
-                      <td style={{ 
-                        color: '#2d3748', 
-                        fontSize: '15px',
-                        padding: '16px 20px',
-                        fontWeight: '600',
-                        textAlign: 'center'
-                      }}>
-                        ₹{Number(o.total).toFixed(2)}
-                      </td>
-                      {/* Status column removed */}
-                      <td className="assign-td">
-                        <select
-                          className="select assign-select"
-                          value={assignments[o.orderId || o.id] || o.assignedTo || ''}
-                          onChange={(e) => assignAgentToOrder(o.orderId || o.id, e.target.value)}
-                        >
-                          <option value="">Unassigned</option>
-                          {agents.map(a => (
-                            <option key={a.email} value={a.email}>{a.name}{a.city ? ` (${a.city})` : ''}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button
-                            className="btn small"
-                            onClick={() => {
-                              const customerName = o.customer;
+                      <tr>
+                        <td className="cell-id">{o.orderId || o.id}</td>
+                        <td style={{ fontWeight: 500 }}>{o.customer}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--accent-emerald)' }}>₹{Number(o.total).toFixed(2)}</td>
+                        <td>
+                          <select
+                            value={assignments[o.orderId || o.id] || o.assignedTo || ''}
+                            onChange={(e) => assignAgentToOrder(o.orderId || o.id, e.target.value)}
+                            style={{ maxWidth: 200 }}
+                          >
+                            <option value="">Unassigned</option>
+                            {agents.map(a => (
+                              <option key={a.email} value={a.email}>{a.name}{a.city ? ` (${a.city})` : ''}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn small primary" onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
                               const assigned = assignments[o.orderId || o.id] || o.assignedTo || 'Unassigned';
                               const items = (o.items || []).map(it => `${it.name} x${it.quantity} @ ₹${it.price}`).join('\n');
-                              alert(`Order Details:\n\nOrder ID: ${o.orderId || o.id}\nCustomer: ${customerName}\nTotal: ₹${Number(o.total).toFixed(2)}\nAssigned To: ${assigned}\n\nItems:\n${items}\n\nOrder Date: ${formatDateFrom(o)}`);
-                            }}
-                            style={{
-                              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            View
-                          </button>
-
-                          <button
-                            className="btn small details"
-                            onClick={() => {
+                              setTimeout(() => {
+                                alert(`Order Details:\n\nOrder ID: ${o.orderId || o.id}\nCustomer: ${o.customer}\nTotal: ₹${Number(o.total).toFixed(2)}\nAssigned To: ${assigned}\n\nItems:\n${items}\n\nOrder Date: ${formatDateFrom(o)}`);
+                              }, 50);
+                            }}>View</button>
+                            <button className="btn small" onClick={() => {
                               const id = o.orderId || o.id;
                               setExpandedOrders(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-                            }}
-                            aria-expanded={expandedOrders.includes(o.orderId || o.id)}
-                          >
-                            Items
-                          </button>
-                        </div>
-                      </td>
+                            }}>Items</button>
+                          </div>
+                        </td>
                       </tr>
                       {expandedOrders.includes(o.orderId || o.id) && (
                         <tr className="order-items-row">
                           <td colSpan={5}>
                             <div className="order-items-container">
                               <table className="order-items-table">
-                              <thead>
-                                <tr>
-                                  <th>Product</th>
-                                  <th>Qty</th>
-                                  <th>Price (₹)</th>
-                                  <th>Subtotal (₹)</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(o.items || []).map((it, idx) => (
-                                  <tr key={idx}>
-                                    <td>{it.name}</td>
-                                    <td>{it.quantity}</td>
-                                    <td>₹{Number(it.price).toFixed(2)}</td>
-                                    <td>₹{(Number(it.price) * Number(it.quantity)).toFixed(2)}</td>
+                                <thead>
+                                  <tr>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Price (₹)</th>
+                                    <th>Subtotal (₹)</th>
                                   </tr>
-                                ))}
-                              </tbody>
+                                </thead>
+                                <tbody>
+                                  {(o.items || []).map((it, idx) => (
+                                    <tr key={idx}>
+                                      <td>{it.name}</td>
+                                      <td>{it.quantity}</td>
+                                      <td>₹{Number(it.price).toFixed(2)}</td>
+                                      <td>₹{(Number(it.price) * Number(it.quantity)).toFixed(2)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
                               </table>
                             </div>
                           </td>
@@ -813,122 +475,43 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* ─── Reports Tab ─── */}
         {activeTab === 'reports' && (
-          <div className="card" style={{ 
-            minHeight: '600px',
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            maxWidth: 'none'
-          }}>
+          <div className="card">
             <div className="card-header">
-              <h3>Reports</h3>
-              <div className="card-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <button 
-                  className="btn" 
-                  style={{
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
-                  Generate Report
-                </button>
+              <h3>📈 Reports</h3>
+              <div className="card-actions">
+                <button className="btn">Generate Report</button>
               </div>
             </div>
-            <div className="table-wrapper" style={{ 
-              flex: 1,
-              minHeight: '500px',
-              borderRadius: '12px', 
-              overflow: 'visible',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0',
-              width: '100%'
-            }}>
-              <table className="table" style={{ 
-                margin: 0,
-                backgroundColor: 'white',
-                minHeight: '500px',
-                width: '100%',
-                tableLayout: 'fixed'
-              }}>
-                <thead style={{ backgroundColor: '#f8fafc' }}>
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
                   <tr>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '25%' }}>Report ID</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '35%' }}>Name</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '25%' }}>Generated At</th>
-                    <th style={{ color: '#2d3748', fontWeight: '600', fontSize: '16px', padding: '16px 20px', width: '15%' }}>Actions</th>
+                    <th>Report ID</th>
+                    <th>Name</th>
+                    <th>Generated At</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reports.map((r) => (
-                    <tr key={r.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={{ 
-                        color: '#4a5568', 
-                        fontSize: '14px', 
-                        fontFamily: 'monospace',
-                        padding: '16px 20px',
-                        wordBreak: 'break-all'
-                      }}>
-                        {r.id}
-                      </td>
-                      <td style={{ 
-                        color: '#2d3748', 
-                        fontSize: '15px', 
-                        fontWeight: '500',
-                        padding: '16px 20px'
-                      }}>
-                        {r.name}
-                      </td>
-                      <td style={{ 
-                        color: '#4a5568', 
-                        fontSize: '15px',
-                        padding: '16px 20px'
-                      }}>
-                        {r.generatedAt}
-                      </td>
-                      <td style={{ padding: '16px 20px' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                          <button 
-                            className="btn small" 
-                            onClick={() => {
+                    <tr key={r.id}>
+                      <td className="cell-id">{r.id}</td>
+                      <td style={{ fontWeight: 500 }}>{r.name}</td>
+                      <td>{r.generatedAt}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button className="btn small primary" onClick={(e) => {
+                            e.stopPropagation();
+                            setTimeout(() => {
                               alert(`Report Details:\n\nReport ID: ${r.id}\nName: ${r.name}\nGenerated At: ${r.generatedAt}\n\nReport Summary:\n- Total Records: 150\n- Status: Generated\n- Format: PDF/CSV\n- Size: 2.5 MB`);
-                            }}
-                            style={{
-                              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            View
-                          </button>
-                          <button 
-                            className="btn small" 
-                            onClick={() => {
-                              alert(`Downloading report: ${r.name}\n\nThis would typically download the report file.\nFor demo purposes, this shows the download action.`);
-                            }}
-                            style={{
-                              background: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-                              color: 'white',
-                              border: 'none',
-                              padding: '6px 12px',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            Download
-                          </button>
+                            }, 50);
+                          }}>View</button>
+                          <button className="btn small success" onClick={(e) => {
+                            e.stopPropagation();
+                            setTimeout(() => alert(`Downloading report: ${r.name}`), 50);
+                          }}>Download</button>
                         </div>
                       </td>
                     </tr>
@@ -939,44 +522,54 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* ─── Product Modal ─── */}
       {showProductModal && (
         <div className="modal-overlay" onClick={closeProductModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingProduct?.id == null ? 'Add Product' : 'Edit Product'}</h3>
-              <button className="btn" onClick={closeProductModal}>✕</button>
+              <h3>{editingProduct?.id == null ? '+ Add Product' : '✏️ Edit Product'}</h3>
+              <button className="btn small" onClick={closeProductModal}>✕</button>
             </div>
             <form onSubmit={saveProduct} className="modal-body">
-              <label className="label">Name</label>
-              <input className="input" value={editingProduct?.name || ''} onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })} />
-              
-              <label className="label">Product Image</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <input 
-                  type="file" 
-                  accept="image/*" 
+              <div className="form-group">
+                <label className="form-label">Name</label>
+                <input value={editingProduct?.name || ''} onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Product Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
                   onChange={(e) => {
                     if (e.target.files && e.target.files.length > 0) {
                       setSelectedImageFile(e.target.files[0]);
                     }
-                  }} 
+                  }}
+                  style={{ padding: 8 }}
                 />
-                <div style={{ fontSize: '12px', color: '#718096', textAlign: 'center' }}>OR</div>
-                <input 
-                  className="input" 
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', margin: '8px 0' }}>OR</div>
+                <input
                   placeholder="Image URL"
-                  value={editingProduct?.image || ''} 
-                  onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })} 
+                  value={editingProduct?.image || ''}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
                 />
               </div>
 
-              <label className="label">Stock</label>
-              <input className="input" type="number" value={editingProduct?.stock ?? 0} onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })} />
-              <label className="label">Price (₹)</label>
-              <input className="input" type="number" step="0.01" value={editingProduct?.price ?? 0} onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })} />
+              <div className="form-group">
+                <label className="form-label">Stock</label>
+                <input type="number" value={editingProduct?.stock ?? 0} onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Price (₹)</label>
+                <input type="number" step="0.01" value={editingProduct?.price ?? 0} onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })} />
+              </div>
+
               <div className="modal-actions">
                 <button type="button" className="btn" onClick={closeProductModal}>Cancel</button>
-                <button type="submit" className="btn primary">Save</button>
+                <button type="submit" className="btn primary">Save Product</button>
               </div>
             </form>
           </div>

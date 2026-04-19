@@ -1,9 +1,6 @@
-// frontend/src/pages/AdminLogin.js
-
 import { useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, Link } from "react-router-dom";
 import { loginUser } from "../mockApi";
-import "../styles.css";
 
 export default function AdminLogin() {
   const history = useHistory();
@@ -19,13 +16,10 @@ export default function AdminLogin() {
 
     try {
       const res = await loginUser({ email, password });
-
-      // ✅ SAFETY CHECK
       if (res.user.role !== "admin") {
         throw new Error("Not an admin account");
       }
 
-      // ✅ Store correct user info
       localStorage.setItem(
         "currentUser",
         JSON.stringify({
@@ -34,7 +28,6 @@ export default function AdminLogin() {
           role: res.user.role,
         })
       );
-
       history.push("/admin");
     } catch (err) {
       setError("Invalid admin credentials");
@@ -44,39 +37,45 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="admin-container">
-      <form className="admin-card" onSubmit={handleLogin}>
-        <h2>Admin Portal</h2>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-icon">🔐</div>
+        <h2 className="auth-title">Admin Portal</h2>
+        <p className="auth-subtitle">Sign in to manage your grocery store</p>
 
-        {error && <div className="error-msg">{error}</div>}
+        {error && <div className="auth-error">{error}</div>}
 
-        <input
-          type="email"
-          placeholder="Admin Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        <form onSubmit={handleLogin} className="auth-form">
+          <div className="form-group">
+            <input
+              type="email"
+              placeholder="Admin email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="btn primary btn-block" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-
-        <div className="footer-text">
-          New admin?{" "}
-          <span onClick={() => history.push("/admin/register")}>
-            Register
-          </span>
+        <div className="auth-links">
+          New admin? <Link to="/admin/register">Create account</Link>
         </div>
-      </form>
+        <div className="auth-links">
+          Customer? <Link to="/">Customer Login</Link>
+        </div>
+      </div>
     </div>
   );
 }

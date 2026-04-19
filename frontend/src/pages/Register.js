@@ -1,46 +1,54 @@
 import React, { useState } from "react";
 import { useHistory, Link } from "react-router-dom";
 import { registerUser } from "../mockApi";
-import "../styles.css";
-import "../App.css";
 
 function Register() {
   const history = useHistory();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
     if (!name || !email || !password) {
-      alert("All fields are required");
+      setError("All fields are required");
       return;
     }
-
-    
     if (password.length < 6) {
-      alert("Password must be at least 6 characters long");
+      setError("Password must be at least 6 characters long");
       return;
     }
 
+    setLoading(true);
     try {
-      const res = await registerUser({ name, email, password, role: 'customer' });
+      const res = await registerUser({ name, email, password, role: "customer" });
       if (!res?.success) {
-        alert(res?.msg || 'Registration failed');
+        setError(res?.msg || "Registration failed");
         return;
       }
       alert("Registration successful! Please login.");
       history.push("/");
     } catch (err) {
-      alert((err && err.message) || 'Network error. Please check the server and try again.');
+      setError((err && err.message) || "Network error. Please check the server and try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <h2 className="login-title">Create Account</h2>
-        <form onSubmit={handleSubmit}>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-icon">📝</div>
+        <h2 className="auth-title">Create Account</h2>
+        <p className="auth-subtitle">Join FreshMart for fresh groceries delivered fast</p>
+
+        {error && <div className="auth-error">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <input
               type="text"
@@ -52,7 +60,7 @@ function Register() {
           <div className="form-group">
             <input
               type="email"
-              placeholder="Email"
+              placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -60,18 +68,21 @@ function Register() {
           <div className="form-group">
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Password (min 6 characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              minLength={6} 
+              minLength={6}
             />
           </div>
-          <button type="submit" className="login-btn">Register</button>
+          <button type="submit" className="btn primary btn-block" disabled={loading}>
+            {loading ? "Creating account..." : "Create Account"}
+          </button>
         </form>
-        <div className="register-link">
-          Already registered? <Link to="/">Login</Link>
+
+        <div className="auth-links">
+          Already registered? <Link to="/">Sign in</Link>
         </div>
-        <div className="register-link" style={{ marginTop: 8 }}>
+        <div className="auth-links">
           Shop owner? <Link to="/admin/register">Admin Register</Link>
         </div>
       </div>

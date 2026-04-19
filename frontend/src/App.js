@@ -46,7 +46,7 @@ function App() {
         <Route path="/order-confirmation" component={OrderConfirmation} />
         <PrivateRoute path="/admin" component={AdminDashboard} roles={["admin"]} />
         <PrivateRoute path="/delivery" component={DeliveryDashboard} roles={["admin", "delivery"]} />
-        <PrivateRoute path="/profile" component={Profile} roles={["customer","admin","delivery"]} />
+        <PrivateRoute path="/profile" component={Profile} roles={["customer", "admin", "delivery"]} />
         <Route path="/shop" component={ShopDashboard} />
       </Switch>
     </Router>
