@@ -40,12 +40,21 @@ export function CartProvider({ children }) {
   const placeOrder = async (form, options = {}) => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
     const orderId = `ORD-${Date.now()}`;
+    const isSingle = !!options.singleProduct;
+    const itemsToBuy = isSingle 
+      ? [{ productId: String(options.singleProduct.id), name: options.singleProduct.name, price: options.singleProduct.price, quantity: 1 }]
+      : cart.map(item => ({ productId: String(item.id), name: item.name, price: item.price, quantity: item.quantity }));
+    
+    const totalToPay = isSingle
+      ? options.singleProduct.price
+      : cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
     const order = {
       orderId,
       customerName: currentUser?.name || form?.name || 'Customer',
       customerEmail: currentUser?.email || '',
-      total: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-      items: cart.map(item => ({ productId: String(item.id), name: item.name, price: item.price, quantity: item.quantity }))
+      total: totalToPay,
+      items: itemsToBuy
     };
     const paid = !!options.paid;
     let created = null;
