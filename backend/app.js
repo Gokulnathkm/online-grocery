@@ -46,7 +46,6 @@ app.options(/.*/, cors(corsOptions)); // preflight requests
    MIDDLEWARE
 ================================= */
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /* ===============================
    REQUEST LOGGER

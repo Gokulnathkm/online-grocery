@@ -1,15 +1,23 @@
 const Product = require('../model/product');
 const multer = require('multer');
 const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 
-// Multer Config
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Multer Storage Config
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'online-grocery',
+    allowedFormats: ['jpeg', 'png', 'jpg'],
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
-  }
 });
 const upload = multer({ storage: storage });
 
@@ -19,7 +27,8 @@ exports.uploadImage = (req, res) => {
   if (!req.file) {
     return res.status(400).json({ msg: 'No file uploaded' });
   }
-  const imageUrl = `/uploads/${req.file.filename}`;
+  // Cloudinary returns the secure URL in req.file.path
+  const imageUrl = req.file.path;
   res.json({ imageUrl });
 };
 
