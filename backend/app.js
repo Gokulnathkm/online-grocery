@@ -7,8 +7,6 @@ const path = require("path");
 
 const connectDB = require("./config/db");
 
-
-
 const app = express();
 
 /* ===============================
@@ -17,24 +15,32 @@ const app = express();
 connectDB();
 
 /* ===============================
-   CORS (Frontend React App)
+   CORS (Local + Vercel Frontend)
 ================================= */
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "https://online-grocery-px5s.vercel.app",
+];
 
-app.use(cors({
-  origin: "http://localhost:3000",
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow requests with no origin (Postman / mobile apps / server requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
 
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions)); // preflight requests
 
 /* ===============================
    MIDDLEWARE
@@ -66,7 +72,6 @@ app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/agents", require("./routes/agentRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 
-
 /* ===============================
    HEALTH CHECK
 ================================= */
@@ -90,7 +95,13 @@ app.use((req, res) => {
    ERROR HANDLER
 ================================= */
 app.use((err, req, res, next) => {
-  console.error(err);
+  console.error(err.message || err);
+
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({
+      message: "CORS blocked this request",
+    });
+  }
 
   res.status(500).json({
     message: "Server Error",
@@ -98,4 +109,3 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
-
